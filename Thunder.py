@@ -15,12 +15,29 @@ YELLOW = (255, 255, 0)
 
 #Init and Create window
 pygame.init()
+pygame.mixer.init()
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Thunder")
 clock = pygame.time.Clock()
 
-#key classes:
+#Sound and BGM
+shootSound = pygame.mixer.Sound('sound/Shoot.wav')
+explosionSound = pygame.mixer.Sound('sound/Explosion.wav')
+backGroundMusic = pygame.mixer.music.load('sound/Ove.ogg')
+pygame.mixer.music.play(loops = -1)
 
+#Score
+score = 0
+fontName = pygame.font.match_font('arial')
+def drawScore(surf, text, size, x, y):
+	font = pygame.font.Font(fontName, size)
+	scoreSurf = font.render(text, True, WHITE)
+	scoreRect = scoreSurf.get_rect()
+	scoreRect.midtop = (x, y)
+	surf.blit(scoreSurf, scoreRect)
+
+#key classes:
 class Player(pygame.sprite.Sprite):
 	def __init__(self):
 		pygame.sprite.Sprite.__init__(self)
@@ -31,6 +48,9 @@ class Player(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.centerx = WIDTH / 2
 		self.rect.bottom = HEIGHT - 10
+		
+		self.radius = int(self.rect.width * 0.9 / 2)
+
 		self.speedx = 0
 	
 	def update(self):		
@@ -55,6 +75,7 @@ class Player(pygame.sprite.Sprite):
 		bullet = Bullet(self.rect.centerx, self.rect.top)
 		spriteGroup.add(bullet)
 		bullets.add(bullet)
+		shootSound.play()
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -85,10 +106,24 @@ class Enemy(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.rect.x = random.randrange(WIDTH - self.rect.width)
 		self.rect.y = random.randrange(-100, -40)
-		self.speedy = random.randrange(1, 8)
+		
+		self.radius = int(self.rect.width * 0.9 / 2)
+
+		self.speedy = random.randrange(1, 6)
 		self.speedx = random.randrange(-2, 2)
-	
-	def update(self):		
+		
+		#self.lastUpdateTime = pygame.time.get_ticks()
+		
+	''' 
+	def rotate(self):
+		currentTime = pygame.time.get_ticks()
+		if currentTime - self.lastUpdateTime > 50:
+			self.lastUpdateTime = currentTime
+	'''		
+				
+	def update(self):
+		#self.rotate()
+		
 		self.rect.y += self.speedy
 		self.rect.x += self.speedx
 		if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
@@ -102,7 +137,7 @@ spriteGroup = pygame.sprite.Group()
 player = Player()
 bullets = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
-for i in range(8):
+for i in range(5):
 	enemy = Enemy()
 	spriteGroup.add(enemy)
 	enemies.add(enemy)
@@ -130,18 +165,21 @@ while running:
 	
 	hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
 	for hit in hits:
+		score += 10;
 		enemy = Enemy()
 		spriteGroup.add(enemy)
 		enemies.add(enemy)
+		explosionSound.play()
 	
-	hits = pygame.sprite.spritecollide(player, enemies, False)
+	hits = pygame.sprite.spritecollide(player, enemies, False, pygame.sprite.collide_circle)
 	if hits:
 		running = False
 	
 	#3. Draw/Render
 	screen.fill(BLACK)
 	spriteGroup.draw(screen)
-	
+	drawScore(screen, str(score), 18, WIDTH / 2, 10)
+		
 	#Double buffering
 	pygame.display.flip()	
 	
